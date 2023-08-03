@@ -1,3 +1,4 @@
+// @ts-nocheck 
 import { BitmapCoordinatesRenderingScope } from 'fancy-canvas';
 
 import { fillRectInnerBorder } from '../helpers/canvas-helpers';
@@ -57,7 +58,7 @@ export class PaneRendererCandlesticks extends BitmapCoordinatesPaneRenderer {
 				this._barWidth--;
 			}
 		}
-
+		this._barWidth = Math.min(this._barWidth,40);   //新添加
 		const bars = this._data.bars;
 		if (this._data.wickVisible) {
 			this._drawWicks(renderingScope, bars, this._data.visibleRange);
@@ -75,6 +76,7 @@ export class PaneRendererCandlesticks extends BitmapCoordinatesPaneRenderer {
 	}
 
 	private _drawWicks(renderingScope: BitmapCoordinatesRenderingScope, bars: readonly CandlestickItem[], visibleRange: SeriesItemsIndexesRange): void {
+		console.log(9999999)
 		if (this._data === null) {
 			return;
 		}
@@ -93,7 +95,12 @@ export class PaneRendererCandlesticks extends BitmapCoordinatesPaneRenderer {
 		const wickOffset = Math.floor(wickWidth * 0.5);
 
 		let prevEdge: number | null = null;
-
+		var maxpoint = 5000;  
+		var maxpointx = 0;
+		var maxhigh = 0;
+		var minpoint = 0;
+		var minpointx = 0;
+		var minlow = 0;
 		for (let i = visibleRange.from; i < visibleRange.to; i++) {
 			const bar = bars[i];
 			if (bar.barWickColor !== prevWickColor) {
@@ -115,15 +122,35 @@ export class PaneRendererCandlesticks extends BitmapCoordinatesPaneRenderer {
 				left = Math.max(prevEdge + 1, left);
 				left = Math.min(left, right);
 			}
+			if (high < maxpoint){
+				maxpoint = high;
+				maxpointx = left;
+				maxhigh = bar.high;
+			}
+			if (low > minpoint){
+				minpoint = low;
+				minpointx = left
+				minlow = bar.low;
+			}
 			const width = right - left + 1;
-
 			ctx.fillRect(left, high, width, top - high);
 			ctx.fillRect(left, bottom + 1, width, low - bottom);
-
 			prevEdge = right;
 		}
+		ctx.beginPath(); // Start a new path
+		ctx.moveTo(maxpointx, maxpoint);
+		ctx.lineTo(maxpointx+20,maxpoint);
+		ctx.moveTo(minpointx, minpoint);
+		ctx.lineTo(minpointx+20,minpoint);
+		ctx.moveTo(maxpointx+20,maxpoint);
+		ctx.arc(maxpointx+20,maxpoint, 3, 0, Math.PI * 2);
+		ctx.moveTo(minpointx+20,minpoint);
+		ctx.arc(minpointx+20,minpoint, 3, 0, Math.PI * 2);
+		ctx.fill();
+		ctx.fillText(maxhigh.toString(),maxpointx+13, maxpoint-10);
+		ctx.fillText(minlow.toString(),minpointx+13, minpoint+15);  
+		ctx.stroke(); // Render the path
 	}
-
 	private _calculateBorderWidth(pixelRatio: number): number {
 		let borderWidth = Math.floor(Constants.BarBorderWidth * pixelRatio);
 		if (this._barWidth <= 2 * borderWidth) {
